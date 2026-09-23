@@ -14,12 +14,11 @@ export const config = {
 };
 export const labels = { job:'🎀 Zatrudnienie', plus:'🌟 Plus', minus:'⚠️ Minus', awans:'✨ Awans', degrad:'↘️ Degradacja', zwolnij:'📋 Zwolnienie', urlop:'🌴 Urlop', zdejmijurlop:'☀️ Zakończenie urlopu', ticket:'💌 Zgłoszenie' };
 export function environment(env = process.env) {
-  for (const key of ['DISCORD_TOKEN','DISCORD_CLIENT_ID','DISCORD_CLIENT_SECRET','DISCORD_GUILD_ID','DATABASE_URL','SESSION_SECRET','PUBLIC_URL']) {
+  for (const key of ['DISCORD_TOKEN','DISCORD_CLIENT_ID','DISCORD_CLIENT_SECRET','DISCORD_GUILD_ID','DATABASE_URL','PUBLIC_URL']) {
     if (!env[key]) throw new Error(`Uzupełnij zmienną ${key}.`);
   }
-  if (env.SESSION_SECRET.length < 32) throw new Error('SESSION_SECRET musi mieć minimum 32 znaki.');
   for (const key of ['DISCORD_CLIENT_ID','DISCORD_GUILD_ID']) if (!/^\d{17,20}$/.test(env[key])) throw new Error(`Nieprawidłowe ${key}.`);
   const url = new URL(env.PUBLIC_URL);
   if (env.NODE_ENV === 'production' && url.protocol !== 'https:') throw new Error('PUBLIC_URL musi używać HTTPS.');
-  return { token:env.DISCORD_TOKEN, clientId:env.DISCORD_CLIENT_ID, clientSecret:env.DISCORD_CLIENT_SECRET, guildId:env.DISCORD_GUILD_ID, databaseUrl:env.DATABASE_URL, sessionSecret:env.SESSION_SECRET, publicUrl:url.origin, port:Number(env.PORT || 3000), production:env.NODE_ENV === 'production' };
+  return { token:env.DISCORD_TOKEN, clientId:env.DISCORD_CLIENT_ID, clientSecret:env.DISCORD_CLIENT_SECRET, guildId:env.DISCORD_GUILD_ID, databaseUrl:env.DATABASE_URL, publicUrl:url.origin, port:Number(env.PORT || 3000), production:env.NODE_ENV === 'production' };
 }

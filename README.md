@@ -43,7 +43,6 @@ Opcjonalnie ukryj komendy przed pozostałymi osobami w **Ustawienia serwera → 
 | `DISCORD_CLIENT_ID` | Application ID |
 | `DISCORD_CLIENT_SECRET` | Client Secret z OAuth2 |
 | `DISCORD_GUILD_ID` | ID serwera Discord |
-| `SESSION_SECRET` | Losowy sekret minimum 32 znaki; zalecane 64 znaki hex |
 | `PUBLIC_URL` | `https://adres-aplikacji.up.railway.app`, bez `/auth/callback` |
 | `NODE_ENV` | `production` |
 | `PORT` | `3000` — ustaw również port 3000 przy generowaniu domeny |
@@ -57,7 +56,7 @@ Aplikacja nasłuchuje na `0.0.0.0` i porcie `PORT`. `/healthz` zwraca 200 dopier
 
 **Aktualizacja Railway, wrzesień 2026:** nowe usługi nie włączają już starszego Config as Code. Plik `railway.json` jest pozostawiony dla zgodności ze starszymi instalacjami; w nowym projekcie skonfiguruj powyższe ustawienia w panelu Railway.
 
-Wygenerowanie sekretu na własnym komputerze: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Wklej wynik wyłącznie do `SESSION_SECRET`.
+Klucz podpisujący sesje logowania powstaje automatycznie przy pierwszym starcie i jest trwale zapisany w prywatnej tabeli `settings` w PostgreSQL. Nie trzeba wpisywać `SESSION_SECRET`; ewentualna stara zmienna o tej nazwie jest ignorowana. Restarty używają tego samego klucza. Klucz nie jest zwracany przez API ani zapisywany w logach. Przy przejściu ze starszej wersji użytkownicy zalogują się ponownie jeden raz.
 
 ## Uruchomienie lokalne
 
