@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="pl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f9f5f2"><title>UwUCatCafe · Kącik zarządu</title><link rel="icon" href="/cat.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
+<body>
+  <div id="login" class="login" hidden><div class="login-card"><img src="/cat.svg" alt="" width="72" height="72"><span class="eyebrow">UWUCATCAFE</span><h1>Dobrze Cię widzieć<span class="pink">.</span></h1><p>Mała przerwa na kawę.<br>Wszystkie sprawy zespołu w jednym miejscu.</p><a class="button primary" href="/auth/discord">Zaloguj się przez Discord <span>↗</span></a><p id="login-error" class="error" role="alert"></p><small>Panel dla uprawnionej kadry UwUCatCafe.</small></div><footer>🐾 UwUCatCafe</footer></div>
+  <div id="shell" class="shell" hidden>
+    <aside class="sidebar"><a class="brand" href="#overview"><img src="/cat.svg" alt="" width="42" height="42"><span>UwUCatCafe<small>KĄCIK ZARZĄDU</small></span></a><span class="nav-label">TWOJA KAWIARNIA</span><nav aria-label="Główne menu"><a href="#overview" data-page="overview"><span>⌂</span>Przegląd</a><a href="#employees" data-page="employees"><span>♧</span>Pracownicy</a><a href="#leaves" data-page="leaves"><span>☀</span>Urlopy</a><a href="#tickets" data-page="tickets"><span>✉</span>Zgłoszenia</a><a href="#logs" data-page="logs"><span>≡</span>Historia działań</a></nav><div class="sidebar-note"><span>☕</span><strong>Dobry zespół.<br>Dobra kawa.</strong><p>Resztę ogarniemy tutaj.</p></div><div class="sidebar-bottom"><div class="account-avatar">♡</div><div><strong id="account-name">Zarząd</strong><small>Panel pracowniczy</small></div><button id="logout" class="icon-button" aria-label="Wyloguj się" title="Wyloguj się">↪</button></div></aside>
+    <div class="workspace"><header class="topbar"><span>UwUCatCafe <span class="muted">/</span> <span id="breadcrumb">Przegląd</span></span><div><span class="live-dot"></span><span id="today"></span><button id="logout-mobile" class="icon-button mobile-only" aria-label="Wyloguj się">↪</button></div></header><main id="content" tabindex="-1"><p class="loading">Przygotowujemy Twój kącik…</p></main><footer>🐾 UwUCatCafe <span>Stworzone z troską o nasz zespół.</span></footer></div>
+  </div>
+  <dialog id="detail"><button class="dialog-close" aria-label="Zamknij">×</button><div id="detail-content"></div></dialog>
+  <div id="toast" role="status" hidden></div>
+</body></html>
