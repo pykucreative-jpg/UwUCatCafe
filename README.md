@@ -32,7 +32,7 @@ Opcjonalnie ukryj komendy przed pozostałymi osobami w **Ustawienia serwera → 
 
 ## Railway — bot, panel i baza
 
-1. **New Project → Deploy from GitHub repo → pykucreative-jpg/UwUCatCafe**. Railway zbuduje aplikację z Dockerfile.
+1. **New Project → Deploy from GitHub repo → pykucreative-jpg/UwUCatCafe**. W usłudze aplikacji ustaw **Settings → Builder → Dockerfile** (ścieżka `/Dockerfile`).
 2. Dodaj do tego samego projektu usługę **PostgreSQL**.
 3. W usłudze aplikacji dodaj zmienne:
 
@@ -46,13 +46,16 @@ Opcjonalnie ukryj komendy przed pozostałymi osobami w **Ustawienia serwera → 
 | `SESSION_SECRET` | Losowy sekret minimum 32 znaki; zalecane 64 znaki hex |
 | `PUBLIC_URL` | `https://adres-aplikacji.up.railway.app`, bez `/auth/callback` |
 | `NODE_ENV` | `production` |
+| `PORT` | `3000` — ustaw również port 3000 przy generowaniu domeny |
 
 4. W ustawieniach sieci aplikacji wygeneruj publiczną domenę i uzupełnij `PUBLIC_URL`. Ten adres + `/auth/callback` wpisz w Discord OAuth2 Redirects.
-5. Wykonaj ponowne wdrożenie. Bot tworzy tabele, rejestruje komendy i publikuje lub aktualizuje panel ticketów. Przy pierwszym uruchomieniu bez zmiennych usługa celowo się nie uruchomi.
+5. W **Settings** ustaw **Healthcheck Path** `/healthz`, **Healthcheck Timeout** `120`, **Restart Policy** `On Failure` (10 prób) oraz **Wait for CI**. Zapisz zmiany i wykonaj wdrożenie. Bot tworzy tabele, rejestruje komendy i publikuje lub aktualizuje panel ticketów. Przy pierwszym uruchomieniu bez zmiennych usługa celowo się nie uruchomi.
 6. Utrzymuj **jedną replikę aplikacji**; wyłącz usypianie/serverless, jeśli jest włączone. Bot potrzebuje stałego połączenia Discord. Nie uruchamiaj jednocześnie drugiej kopii z tym samym tokenem i bazą.
 7. Otwórz stronę i zaloguj się przez Discord kontem ze wskazaną rangą. Sprawdź działanie na testowym pracowniku przed użyciem zwolnień.
 
-Railway dostarcza `PORT`; aplikacja nasłuchuje na `0.0.0.0`. `/healthz` zwraca 200 dopiero, gdy baza i bot są gotowe. Trwałe dane, sesje i **binarne zdjęcia dowodów** są w PostgreSQL, więc dysk aplikacji może być nietrwały. Włącz kopie zapasowe bazy w Railway; zdjęcia do 8 MB zwiększają jej rozmiar.
+Aplikacja nasłuchuje na `0.0.0.0` i porcie `PORT`. `/healthz` zwraca 200 dopiero, gdy baza i bot są gotowe. Trwałe dane, sesje i **binarne zdjęcia dowodów** są w PostgreSQL, więc dysk aplikacji może być nietrwały. Włącz kopie zapasowe bazy w Railway; zdjęcia do 8 MB zwiększają jej rozmiar.
+
+**Aktualizacja Railway, wrzesień 2026:** nowe usługi nie włączają już starszego Config as Code. Plik `railway.json` jest pozostawiony dla zgodności ze starszymi instalacjami; w nowym projekcie skonfiguruj powyższe ustawienia w panelu Railway.
 
 Wygenerowanie sekretu na własnym komputerze: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Wklej wynik wyłącznie do `SESSION_SECRET`.
 
