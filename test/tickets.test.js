@@ -11,9 +11,9 @@ test('formularze tworzą prywatne tickety, blokują duplikaty i zachowują rozmo
  const q=async(sql,params=[])=>{const r=await pg.query(sql,params);return {...r,rowCount:r.affectedRows??r.rows.length};};
  const db={q,lock:async(k,fn)=>fn(),transaction:async fn=>pg.transaction(tx=>fn({query:(sql,params)=>tx.query(sql,params)}))};
  const channelId='999999999999999999',userId='222222222222222222',guildId='333333333333333333';
- let created,locked=false,sequence=0;const sent=[];
+ let created,deleted=false,sequence=0;const sent=[];
  const transcript={id:'888888888888888888',guildId,channelId,author:{id:userId,username:'Jan',bot:false},content:'Treść rozmowy',attachments:new Collection(),createdAt:new Date(),editedAt:null};
- const channel={id:channelId,send:async payload=>{sent.push(payload);return {id:String(++sequence)};},delete:async()=>{},permissionOverwrites:{edit:async()=>{locked=true;}},messages:{fetch:async()=>new Collection([[transcript.id,transcript]]),edit:async()=>{}}};
+ const channel={id:channelId,send:async payload=>{sent.push(payload);return {id:String(++sequence)};},delete:async()=>{assert.equal((await q('SELECT body FROM ticket_messages')).rows[0].body,'Treść rozmowy');deleted=true;},permissionOverwrites:{edit:async()=>{deleted=false;}},messages:{fetch:async()=>new Collection([[transcript.id,transcript]]),edit:async()=>{}}};
  const client=new EventEmitter();client.user={id:'444444444444444444'};client.channels={fetch:async()=>channel};
  const svc={guild:async()=>({id:guildId,channels:{create:async options=>{created=options;return channel;}}}),authorize:async()=>({id:'111111111111111111',name:'Anna'}),audit:async(meta,fn)=>fn([])};
  const handler=bot(db,client,svc,{guildId});
@@ -26,9 +26,9 @@ test('formularze tworzą prywatne tickety, blokują duplikaty i zachowują rozmo
  assert.ok(created.permissionOverwrites.some(x=>x.id===config.staff));
  assert.match(i.result.embeds[0].data.title,/utworzone/);
  const duplicate=interaction('contact',{name:'Jan',subject:'Drugi',body:'Duplikat'});await client.listeners(Events.InteractionCreate)[0](duplicate);assert.match(duplicate.result.embeds[0].data.description,/już otwarte/);
- const ticket=(await q('SELECT * FROM tickets')).rows[0];await handler.closeTicket(ticket.id,'111111111111111111','Załatwiono');assert.equal(locked,true);assert.equal((await q('SELECT status FROM tickets')).rows[0].status,'closed');assert.equal((await q('SELECT body FROM ticket_messages')).rows[0].body,'Treść rozmowy');
+ const ticket=(await q('SELECT * FROM tickets')).rows[0];await handler.closeTicket(ticket.id,'111111111111111111','Załatwiono');assert.equal(deleted,true);assert.equal((await q('SELECT status FROM tickets')).rows[0].status,'closed');assert.equal((await q('SELECT body FROM ticket_messages')).rows[0].body,'Treść rozmowy');
  channel.id='777777777777777777';
- const leave=interaction('leave',{name:'Jan Kowalski',body:'Wyjazd',from:'01.01.2030 10:00',to:'05.01.2030 18:00'});await client.listeners(Events.InteractionCreate)[0](leave);
+ const leave=interaction('leave',{name:'Jan Kowalski',body:'Wyjazd',from:'01.01',to:'31.12'});await client.listeners(Events.InteractionCreate)[0](leave);
  assert.equal(created.parent,config.leaveCategory);assert.match(leave.result.embeds[0].data.title,/utworzone/);
  assert.equal((await q('SELECT status FROM leaves')).rows[0].status,'pending');
  const leaveTicket=(await q("SELECT id FROM tickets WHERE kind='leave'")).rows[0];await assert.rejects(()=>handler.closeTicket(leaveTicket.id,'111111111111111111','Zamknij'),/Najpierw zatwierdź/);

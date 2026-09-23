@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { nextPlus,rankChange,parseDate,leaveNickname,clearLeaveNickname,imageType } from '../src/domain.js';
+import { nextPlus,rankChange,parseDate,parseLeaveDate,leaveNickname,clearLeaveNickname,imageType } from '../src/domain.js';
 import { config,environment } from '../src/config.js';
 import { commands } from '../src/bot.js';
 test('piąty plus zeruje licznik; następny zaczyna nowy cykl',()=>{
@@ -36,3 +36,10 @@ test('wszystkie uzgodnione komendy są zarejestrowane',()=>{
  assert.equal(commands().find(c=>c.name==='job').options.find(o=>o.name==='zdjecie_dowodu').type,11);
 });
 test('konfiguracja nie uruchamia się bez sekretów',()=>assert.throws(()=>environment({}),/DISCORD_TOKEN/));
+
+test('urlop DD.MM używa bieżącego roku i końca dnia w Polsce',()=>{
+ const reference=new Date('2026-09-23T12:00:00Z');
+ assert.equal(parseLeaveDate('25.09',{reference}).toISOString(),'2026-09-24T22:00:00.000Z');
+ assert.equal(parseLeaveDate('25.09',{reference,end:true}).toISOString(),'2026-09-25T21:59:59.999Z');
+ for(const value of ['31.02','29.02','25.09.2026','25.09 10:00']) assert.throws(()=>parseLeaveDate(value,{reference}));
+});

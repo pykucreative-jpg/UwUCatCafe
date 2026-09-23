@@ -6,6 +6,13 @@ export const text = (value, max=1000) => {
   if (!s || s.length > max) throw new UserError(`Pole musi mieć od 1 do ${max} znaków.`);
   return s;
 };
+export function parseLeaveDate(value,{end=false,reference=new Date()}={}) {
+  const raw=text(value,5);
+  const year=DateTime.fromJSDate(reference,{zone:'Europe/Warsaw'}).year;
+  const dt=DateTime.fromFormat(`${raw}.${year}`,'dd.MM.yyyy',{zone:'Europe/Warsaw'});
+  if(!/^\d{2}\.\d{2}$/.test(raw)||!dt.isValid||dt.toFormat('dd.MM')!==raw) throw new UserError('Podaj prawidłową datę DD.MM, np. 25.09. Rok jest uzupełniany automatycznie.');
+  return (end?dt.endOf('day'):dt.startOf('day')).toJSDate();
+}
 export function parseDate(value) {
   const raw = text(value, 16);
   const dt = DateTime.fromFormat(raw, 'dd.MM.yyyy HH:mm', { zone:'Europe/Warsaw', locale:'pl' });

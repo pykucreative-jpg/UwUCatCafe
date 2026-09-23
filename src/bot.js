@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, Partials, Events, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits, MessageFlags, escapeMarkdown } from 'discord.js';
 import { config, labels } from './config.js';
-import { UserError, parseDate, formatDate, text } from './domain.js';
+import { UserError, parseLeaveDate, formatDate, text } from './domain.js';
 import { blacklistService } from './blacklist.js';
 
 export const makeClient = () => new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent],partials:[Partials.Message],allowedMentions:{parse:[]}});
@@ -20,7 +20,7 @@ export function commands() {
   return [
     who(basic('job','🎀 Zatrudnij pracownika')).addAttachmentOption(o=>o.setName('zdjecie_dowodu').setDescription('Zdjęcie dowodu postaci IC, do 8 MB').setRequired(true)).addStringOption(o=>o.setName('imie_i_nazwisko_ic').setDescription('Imię i nazwisko postaci').setMaxLength(32).setRequired(true)).addStringOption(o=>o.setName('ssn').setDescription('SSN postaci IC').setMaxLength(40).setRequired(true)),
     ...[['plus','🌟 Przyznaj plus'],['minus','⚠️ Wystaw minus'],['awans','✨ Awansuj o jeden stopień'],['degrad','↘️ Degraduj o jeden stopień'],['zwolnij','📋 Zwolnij i usuń z serwera'],['zdejmijurlop','☀️ Zakończ urlop ręcznie']].map(([name,description])=>why(who(basic(name,description)))),
-    who(basic('urlop','🌴 Przyznaj urlop od teraz')).addStringOption(o=>o.setName('do_kiedy').setDescription('DD.MM.RRRR GG:MM — czas polski').setRequired(true)),
+    who(basic('urlop','🌴 Przyznaj urlop od teraz')).addStringOption(o=>o.setName('do_kiedy').setDescription('DD.MM — urlop do końca dnia, bieżący rok').setRequired(true)),
     who(basic('szukaj','🐱 Profil i historia pracownika')),
     basic('bldodaj','🚫 Dodaj osobę na czarną listę')
       .addStringOption(o=>o.setName('imie_i_nazwisko').setDescription('Imię i nazwisko postaci IC').setMaxLength(80).setRequired(true))
@@ -72,7 +72,7 @@ export function bot(db,client,svc,env) {
       const body=text(i.fields.getTextInputValue('body'),1000);
       let starts,ends;
       if(kind==='leave') {
-        starts=parseDate(i.fields.getTextInputValue('from')); ends=parseDate(i.fields.getTextInputValue('to'));
+        starts=parseLeaveDate(i.fields.getTextInputValue('from')); ends=parseLeaveDate(i.fields.getTextInputValue('to'),{end:true});
         if(ends<=starts||ends<=new Date()) throw new UserError('Koniec urlopu musi wypadać po rozpoczęciu i w przyszłości.');
         if((await db.q("SELECT id FROM leaves WHERE user_id=$1 AND status IN ('pending','scheduled','active','starting','ending')",[i.user.id])).rowCount) throw new UserError('Masz już urlop lub wniosek oczekujący na decyzję.');
       }
@@ -116,7 +116,7 @@ export function bot(db,client,svc,env) {
       return svc.audit({category:'ticket',actor,target:{id:t.user_id,name:t.ic_name},reason:text(reason),channelId:t.channel_id},async steps=>{
         const channel=await client.channels.fetch(t.channel_id);
         if(!channel) throw new UserError('Nie znaleziono kanału zgłoszenia.');
-        // Backfill missed messages after downtime before locking the channel; keep the channel as an archive.
+        // Save the complete conversation before deleting the Discord channel.
         let before;
         for(;;) {
           const messages=await channel.messages.fetch({limit:100,...(before?{before}:{})});
@@ -124,11 +124,9 @@ export function bot(db,client,svc,env) {
           if(messages.size<100) break;
           before=messages.last().id;
         }
-        await channel.permissionOverwrites.edit(t.user_id,{SendMessages:false}); steps.push('Zamknięto możliwość pisania');
-        await channel.send({embeds:[card({title:'🔒 Zgłoszenie zamknięte',description:`Dziękujemy za kontakt! ☕\n**Powód:** ${escapeMarkdown(reason)}\n**Zamknięto przez:** <@${actorId}>`})]});
+        await channel.delete('Zamknięcie zgłoszenia'); steps.push('Usunięto kanał zgłoszenia');
         await db.q("UPDATE tickets SET status='closed',closed_at=now() WHERE id=$1",[id]);
-        if(t.message_id) await channel.messages.edit(t.message_id,{components:[]}).catch(()=>{});
-        return {title:'🔒 Zgłoszenie zamknięte',description:'Rozmowa została zachowana w panelu.'};
+        return {title:'🔒 Zgłoszenie zamknięte',description:'Kanał został usunięty. Rozmowa została zachowana w panelu.'};
       });
     });
   }
@@ -193,7 +191,7 @@ export function bot(db,client,svc,env) {
         }
         const target=i.options.getUser('osoba',true);
         if(i.commandName==='szukaj') { await i.editReply(await showProfile(target.id)); return; }
-        const result=await svc.run({kind:i.commandName,actorId:i.user.id,targetId:target.id,reason:i.options.getString('powod')||'',channelId:i.channelId,requestId:i.id,icName:i.options.getString('imie_i_nazwisko_ic'),ssn:i.options.getString('ssn'),attachment:i.options.getAttachment('zdjecie_dowodu'),endsAt:i.commandName==='urlop'?parseDate(i.options.getString('do_kiedy')):undefined});
+        const result=await svc.run({kind:i.commandName,actorId:i.user.id,targetId:target.id,reason:i.options.getString('powod')||'',channelId:i.channelId,requestId:i.id,icName:i.options.getString('imie_i_nazwisko_ic'),ssn:i.options.getString('ssn'),attachment:i.options.getAttachment('zdjecie_dowodu'),endsAt:i.commandName==='urlop'?parseLeaveDate(i.options.getString('do_kiedy'),{end:true}):undefined});
         // /job's attachment and SSN remain in the ephemeral command; only the sanitized card is public.
         try {await i.channel.send({embeds:[card(result)]}); await i.editReply({content:'🐾 Gotowe — wiadomość pojawiła się na kanale.'});}
         catch {await i.editReply({content:'Działanie zapisano, ale nie udało się wysłać wiadomości na ten kanał.',embeds:[card(result)]});}
@@ -202,7 +200,7 @@ export function bot(db,client,svc,env) {
         if(action==='open') {
           const modal=new ModalBuilder().setCustomId(`form:${id}`).setTitle(id==='leave'?'🌴 Wniosek urlopowy':'💌 Kontakt z zarządem');
           modal.addComponents(input('name','Imię i nazwisko IC',80));
-          if(id==='leave') modal.addComponents(input('from','Od kiedy? DD.MM.RRRR GG:MM',16),input('to','Do kiedy? DD.MM.RRRR GG:MM',16),input('body','Powód urlopu',1000,true));
+          if(id==='leave') modal.addComponents(input('from','Od kiedy? DD.MM',5),input('to','Do kiedy? DD.MM',5),input('body','Powód urlopu',1000,true));
           else modal.addComponents(input('subject','Temat sprawy',100),input('body','W czym możemy pomóc?',1000,true));
           await i.showModal(modal); return;
         }
