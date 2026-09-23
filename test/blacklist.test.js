@@ -49,7 +49,7 @@ test('czarna lista: dodanie, pełne powody, wyszukiwanie, zdjęcia, usuwanie i k
       deferReply:async()=>{i.deferred=true;},editReply:async payload=>{i.result=payload;},channel:{send:async payload=>{sent.push(payload);}}};return i;};
     const handler=client.listeners(Events.InteractionCreate)[0];
     await handler(interaction('bldodaj','00444'));assert.equal(sent.length,1);assert.match(sent[0].embeds[0].data.description,/Jan Kowalski/);assert.equal(sent[0].embeds[0].data.image.url,'attachment://zdjecie.jpg');assert.equal(sent[0].embeds[0].data.fields[0].value,'Testowy powód');assert.equal(sent[0].embeds[0].data.footer.text,'🐾 UwUCatCafe');assert.equal(sent[0].files[0].attachment.length,4);
-    const search=interaction('blszukaj','00777');await handler(search);assert.equal(search.result.embeds.length,5);assert.equal(search.result.embeds[1].data.fields[0].value.length,1000);assert.equal(search.result.components[0].components[1].data.disabled,false);
+    const search=interaction('blszukaj','00777');await handler(search);assert.equal(search.result.embeds.length,1);assert.equal(search.result.embeds[0].data.fields.length,4);assert.match(search.result.embeds[0].data.fields[0].name,/^1\. Powód/);assert.equal(search.result.embeds[0].data.fields[0].value.length,1000);assert.equal(search.result.components[0].components[1].data.disabled,false);
     const denied=interaction('blszukaj','00777');actor.roles.cache.clear();await handler(denied);assert.match(denied.result.embeds[0].data.description,/uprawnionej kadry/);actor.roles.cache.set(config.staff,{});
     await handler(interaction('blusun','00444'));assert.equal((await bl.search('00444')).total,0);
   });

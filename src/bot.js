@@ -43,10 +43,11 @@ export function bot(db,client,svc,env) {
   async function blacklistResults(ssn,page=0) {
     const result=await bl.search(ssn,page);
     if(!result.total) return {embeds:[card({title:'🔎 Czarna lista',description:`Brak aktywnych wpisów dla SSN **${escapeMarkdown(result.ssn)}**.`})],components:[]};
-    const description=`**🪪 SSN:** ${escapeMarkdown(result.ssn)} · **Wpisy:** ${result.total}`;
+    const description=`**${escapeMarkdown(result.items[0]?.ic_name||'')}**\n**🪪 SSN:** ${escapeMarkdown(result.ssn)} · **Wpisy:** ${result.total}`;
     // Store only a database reference in custom IDs, so arbitrary SSNs cannot break pagination.
     const ref=result.items[0]?.id;
-    return {embeds:[card({title:'🚫 Powody wpisów na czarną listę',description}),...result.items.map(e=>card({title:escapeMarkdown(e.ic_name),fields:{'💬 Powód':e.reason,'👤 Dodano przez':`<@${e.added_by}>`,'📅 Data':formatDate(e.created_at)}}))],components:ref?[row(btn(`blpage:${ref}:${Math.max(0,page-1)}`,'← Poprzednia').setDisabled(page===0),btn(`blpage:${ref}:${page+1}`,'Następna →').setDisabled(!result.more))]:[]};
+    const fields=Object.fromEntries(result.items.map((e,index)=>[`${page*4+index+1}. Powód · 📅 ${formatDate(e.created_at)}`,e.reason]));
+    return {embeds:[card({title:'🚫 Czarna lista',description,fields})],components:ref&&(page>0||result.more)?[row(btn(`blpage:${ref}:${Math.max(0,page-1)}`,'← Poprzednia').setDisabled(page===0),btn(`blpage:${ref}:${page+1}`,'Następna →').setDisabled(!result.more))]:[]};
   }
   const profileButtons=id=>row(...[['plus','🌟 Plusy'],['minus','⚠️ Minusy'],['awans','↗️ Awanse'],['degrad','↘️ Degradacje'],['all','📋 Historia']].map(([category,label])=>btn(`history:${id}:${category}:0`,label)));
   const ticketButtons=t=>t.kind==='leave'?row(btn(`approve:${t.leave_id}`,'✅ Zatwierdź',ButtonStyle.Success),btn(`reject:${t.leave_id}`,'❌ Odrzuć',ButtonStyle.Danger),btn(`close:${t.id}`,'🔒 Zamknij zgłoszenie')):row(btn(`close:${t.id}`,'🔒 Zamknij zgłoszenie'));
@@ -209,7 +210,8 @@ export function bot(db,client,svc,env) {
           await svc.authorize(i.user.id);
           await i.showModal(new ModalBuilder().setCustomId(`${action}form:${id}`).setTitle(action==='reject'?'Odrzucenie urlopu':'Zamknięcie zgłoszenia').addComponents(input('reason','Powód',1000,true))); return;
         }
-        await i.deferReply({flags:MessageFlags.Ephemeral}); await svc.authorize(i.user.id);
+        if(action==='blpage') {await svc.authorize(i.user.id);await i.deferUpdate();}
+        else {await i.deferReply({flags:MessageFlags.Ephemeral}); await svc.authorize(i.user.id);}
         if(action==='history') await i.editReply(await history(id,category,Number(page)));
         else if(action==='blpage') {
           const entry=(await db.q('SELECT ssn FROM blacklist WHERE id=$1 AND removed_at IS NULL',[id])).rows[0];
