@@ -12,7 +12,7 @@ Bot Discord i prywatny panel zarządu dla firmy RP UwUCatCafe. Polski interfejs,
 - `/urlop osoba do_kiedy` — urlop od teraz, ranga urlopowa, pseudonim z `[urlop]`, automatyczny koniec i wiadomość na kanale użycia komendy.
 - `/zdejmijurlop osoba powod` — ręczne zakończenie aktywnego lub anulowanie zaplanowanego urlopu.
 - `/szukaj osoba` — stanowisko, zatrudniający, data zatrudnienia, plusy, minusy, urlop i ostatnie działania; przyciski historii z paginacją. Profil jest widoczny tylko dla wywołującego pracownika kadry.
-- `/bldodaj imie_i_nazwisko zdjecie powod ssn` — dodaje wpis na czarną listę i publikuje na kanale dane postaci, zdjęcie, a pod nim powód i autora. Jedno SSN może mieć wiele wpisów. Zdjęcia PNG/JPG/WebP do 8 MB są zapisywane w bazie.
+- `/bldodaj imie_i_nazwisko zdjecie powod ssn` — dodaje wpis na czarną listę i publikuje na kanale dane postaci, powód i autora, a pod nimi zdjęcie. Jedno SSN może mieć wiele wpisów. Zdjęcia PNG/JPG/WebP do 8 MB są zapisywane w bazie.
 - `/blszukaj ssn` — pokazuje wszystkie aktywne powody dla dokładnego SSN (z zachowaniem zer na początku), autorów i daty; długą listę dzieli na strony. Wynik jest prywatny dla wywołującego członka kadry.
 - `/blusun ssn` — usuwa wszystkie aktywne wpisy tej osoby z czarnej listy. Historia dodania i usunięcia zostaje w logach. Komendy czarnej listy używają tej samej rangi zarządu co pozostałe komendy; nie nadają bana Discord.
 - Panel ticketów pojawia się automatycznie na ustalonym kanale: kontakt z zarządem i wniosek urlopowy, formularze, prywatne kanały, zatwierdzanie i odrzucanie, zamykanie z powodem.

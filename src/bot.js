@@ -37,9 +37,8 @@ export function bot(db,client,svc,env) {
     const image=await bl.photo(result.photoId);
     const ext={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[image.photo_type];
     const file=`zdjecie.${ext}`;
-    // Separate cards preserve the requested order: personal data → image → reason and author.
-    const person=card({title:result.title,description:result.description}).setImage(`attachment://${file}`).setFooter(null);
-    return {files:[{attachment:Buffer.from(image.photo),name:file}],embeds:[person,card({title:'📋 Powód wpisu',fields:result.fields})]};
+    const person=card(result).setImage(`attachment://${file}`);
+    return {files:[{attachment:Buffer.from(image.photo),name:file}],embeds:[person]};
   }
   async function blacklistResults(ssn,page=0) {
     const result=await bl.search(ssn,page);
