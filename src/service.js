@@ -210,5 +210,5 @@ export function service(db, client, env) {
     const latest=(await db.q("SELECT DISTINCT ON (category) * FROM logs WHERE target_id=$1 AND status='success' ORDER BY category,created_at DESC",[id])).rows;
     return {employee:e,leave,history,latest};
   }
-  return {guild,member,authorize,employee,run,audit,profile,decideLeave,tickLeaves,notify};
+  return {guild,member,authorize,employee,run,audit,profile,decideLeave,tickLeaves,notify,proof};
 }

@@ -32,7 +32,7 @@ test('dowód nie przyjmuje SVG ani HTML',()=>{
  assert.equal(imageType(Buffer.from([255,216,255,0])),'image/jpeg');
 });
 test('wszystkie uzgodnione komendy są zarejestrowane',()=>{
- assert.deepEqual(commands().map(c=>c.name).sort(),['job','plus','minus','awans','degrad','zwolnij','urlop','zdejmijurlop','szukaj'].sort());
+ assert.deepEqual(commands().map(c=>c.name).sort(),['job','plus','minus','awans','degrad','zwolnij','urlop','zdejmijurlop','szukaj','bldodaj','blszukaj','blusun'].sort());
  assert.equal(commands().find(c=>c.name==='job').options.find(o=>o.name==='zdjecie_dowodu').type,11);
 });
 test('konfiguracja nie uruchamia się bez sekretów',()=>assert.throws(()=>environment({}),/DISCORD_TOKEN/));

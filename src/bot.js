@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, Partials, Events, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ChannelType, PermissionFlagsBits, MessageFlags, escapeMarkdown } from 'discord.js';
 import { config, labels } from './config.js';
 import { UserError, parseDate, formatDate, text } from './domain.js';
+import { blacklistService } from './blacklist.js';
 
 export const makeClient = () => new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMembers,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent],partials:[Partials.Message],allowedMentions:{parse:[]}});
 export function card(result) {
@@ -20,10 +21,34 @@ export function commands() {
     who(basic('job','🎀 Zatrudnij pracownika')).addAttachmentOption(o=>o.setName('zdjecie_dowodu').setDescription('Zdjęcie dowodu postaci IC, do 8 MB').setRequired(true)).addStringOption(o=>o.setName('imie_i_nazwisko_ic').setDescription('Imię i nazwisko postaci').setMaxLength(32).setRequired(true)).addStringOption(o=>o.setName('ssn').setDescription('SSN postaci IC').setMaxLength(40).setRequired(true)),
     ...[['plus','🌟 Przyznaj plus'],['minus','⚠️ Wystaw minus'],['awans','✨ Awansuj o jeden stopień'],['degrad','↘️ Degraduj o jeden stopień'],['zwolnij','📋 Zwolnij i usuń z serwera'],['zdejmijurlop','☀️ Zakończ urlop ręcznie']].map(([name,description])=>why(who(basic(name,description)))),
     who(basic('urlop','🌴 Przyznaj urlop od teraz')).addStringOption(o=>o.setName('do_kiedy').setDescription('DD.MM.RRRR GG:MM — czas polski').setRequired(true)),
-    who(basic('szukaj','🐱 Profil i historia pracownika'))
+    who(basic('szukaj','🐱 Profil i historia pracownika')),
+    basic('bldodaj','🚫 Dodaj osobę na czarną listę')
+      .addStringOption(o=>o.setName('imie_i_nazwisko').setDescription('Imię i nazwisko postaci IC').setMaxLength(80).setRequired(true))
+      .addAttachmentOption(o=>o.setName('zdjecie').setDescription('Zdjęcie PNG, JPG lub WebP, do 8 MB').setRequired(true))
+      .addStringOption(o=>o.setName('powod').setDescription('Powód wpisu').setMaxLength(1000).setRequired(true))
+      .addStringOption(o=>o.setName('ssn').setDescription('SSN postaci IC').setMaxLength(40).setRequired(true)),
+    ...[['blszukaj','🔎 Wyszukaj powody wpisów po SSN'],['blusun','🕊️ Usuń osobę z czarnej listy']].map(([name,description])=>basic(name,description).addStringOption(o=>o.setName('ssn').setDescription('SSN postaci IC').setMaxLength(40).setRequired(true)))
   ].map(c=>c.toJSON());
 }
 export function bot(db,client,svc,env) {
+  const bl=blacklistService(db,svc);
+  async function blacklistPayload(result) {
+    if(!result.photoId) return {embeds:[card(result)]};
+    const image=await bl.photo(result.photoId);
+    const ext={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[image.photo_type];
+    const file=`zdjecie.${ext}`;
+    // Separate cards preserve the requested order: personal data → image → reason and author.
+    const person=card({title:result.title,description:result.description}).setImage(`attachment://${file}`).setFooter(null);
+    return {files:[{attachment:Buffer.from(image.photo),name:file}],embeds:[person,card({title:'📋 Powód wpisu',fields:result.fields})]};
+  }
+  async function blacklistResults(ssn,page=0) {
+    const result=await bl.search(ssn,page);
+    if(!result.total) return {embeds:[card({title:'🔎 Czarna lista',description:`Brak aktywnych wpisów dla SSN **${escapeMarkdown(result.ssn)}**.`})],components:[]};
+    const description=`**🪪 SSN:** ${escapeMarkdown(result.ssn)} · **Wpisy:** ${result.total}`;
+    // Store only a database reference in custom IDs, so arbitrary SSNs cannot break pagination.
+    const ref=result.items[0]?.id;
+    return {embeds:[card({title:'🚫 Powody wpisów na czarną listę',description}),...result.items.map(e=>card({title:escapeMarkdown(e.ic_name),fields:{'💬 Powód':e.reason,'👤 Dodano przez':`<@${e.added_by}>`,'📅 Data':formatDate(e.created_at)}}))],components:ref?[row(btn(`blpage:${ref}:${Math.max(0,page-1)}`,'← Poprzednia').setDisabled(page===0),btn(`blpage:${ref}:${page+1}`,'Następna →').setDisabled(!result.more))]:[]};
+  }
   const profileButtons=id=>row(...[['plus','🌟 Plusy'],['minus','⚠️ Minusy'],['awans','↗️ Awanse'],['degrad','↘️ Degradacje'],['all','📋 Historia']].map(([category,label])=>btn(`history:${id}:${category}:0`,label)));
   const ticketButtons=t=>t.kind==='leave'?row(btn(`approve:${t.leave_id}`,'✅ Zatwierdź',ButtonStyle.Success),btn(`reject:${t.leave_id}`,'❌ Odrzuć',ButtonStyle.Danger),btn(`close:${t.id}`,'🔒 Zamknij zgłoszenie')):row(btn(`close:${t.id}`,'🔒 Zamknij zgłoszenie'));
   async function showProfile(id) {
@@ -134,7 +159,7 @@ export function bot(db,client,svc,env) {
       try {
         const ch=await client.channels.fetch(config.logs);
         const result=l.details;
-        await ch.send({embeds:[card({title:labels[l.category]||'📋 Historia',fields:{'🐱 Pracownik':l.target_id?`<@${l.target_id}> · ${escapeMarkdown(l.target_name||'')}`:'—','👤 Wykonano przez':`<@${l.actor_id}> · ${escapeMarkdown(l.actor_name)}`,'💬 Powód':escapeMarkdown(l.reason||'—'),'📋 Wynik':l.status==='success'?'Wykonano':l.status==='noop'?'Bez zmian':result.error||'Nie ukończono','☕ Szczegóły':result.fields?.['☕ Stanowisko'] || result.description || result.steps?.join(' · ') || '—','🕒 Data':formatDate(l.created_at)}})]});
+        await ch.send({embeds:[card({title:labels[l.category]||'📋 Historia',fields:{'🐱 Osoba':l.target_id?`<@${l.target_id}> · ${escapeMarkdown(l.target_name||'')}`:escapeMarkdown(l.target_name||'—'),'👤 Wykonano przez':`<@${l.actor_id}> · ${escapeMarkdown(l.actor_name)}`,'💬 Powód':escapeMarkdown(l.reason||'—'),'📋 Wynik':l.status==='success'?'Wykonano':l.status==='noop'?'Bez zmian':result.error||'Nie ukończono','☕ Szczegóły':result.fields?.['☕ Stanowisko'] || result.description || result.steps?.join(' · ') || '—','🕒 Data':formatDate(l.created_at)}})]});
         await db.q('UPDATE logs SET delivered=true WHERE id=$1',[l.id]);
       } catch(err) { console.error('Nie wysłano logu',l.id,err.code||err.name); break; }
     }
@@ -156,6 +181,16 @@ export function bot(db,client,svc,env) {
       if(i.isChatInputCommand()) {
         await i.deferReply({flags:MessageFlags.Ephemeral});
         await svc.authorize(i.user.id);
+        if(['bldodaj','blszukaj','blusun'].includes(i.commandName)) {
+          const ssn=i.options.getString('ssn',true);
+          if(i.commandName==='blszukaj') {await i.editReply(await blacklistResults(ssn));return;}
+          const args={ssn,actorId:i.user.id,channelId:i.channelId,requestId:i.id};
+          const result=i.commandName==='blusun'?await bl.remove(args):await bl.add({...args,icName:i.options.getString('imie_i_nazwisko',true),reason:i.options.getString('powod',true),attachment:i.options.getAttachment('zdjecie',true)});
+          const payload=await blacklistPayload(result);
+          try {await i.channel.send(payload);await i.editReply({content:'🐾 Gotowe — wiadomość pojawiła się na kanale.'});}
+          catch {await i.editReply({content:'Wpis zapisano, ale nie udało się wysłać wiadomości na kanał.',...payload});}
+          return;
+        }
         const target=i.options.getUser('osoba',true);
         if(i.commandName==='szukaj') { await i.editReply(await showProfile(target.id)); return; }
         const result=await svc.run({kind:i.commandName,actorId:i.user.id,targetId:target.id,reason:i.options.getString('powod')||'',channelId:i.channelId,requestId:i.id,icName:i.options.getString('imie_i_nazwisko_ic'),ssn:i.options.getString('ssn'),attachment:i.options.getAttachment('zdjecie_dowodu'),endsAt:i.commandName==='urlop'?parseDate(i.options.getString('do_kiedy')):undefined});
@@ -177,6 +212,11 @@ export function bot(db,client,svc,env) {
         }
         await i.deferReply({flags:MessageFlags.Ephemeral}); await svc.authorize(i.user.id);
         if(action==='history') await i.editReply(await history(id,category,Number(page)));
+        else if(action==='blpage') {
+          const entry=(await db.q('SELECT ssn FROM blacklist WHERE id=$1 AND removed_at IS NULL',[id])).rows[0];
+          if(!entry) throw new UserError('Ten wpis został usunięty. Wyszukaj SSN ponownie.');
+          await i.editReply(await blacklistResults(entry.ssn,Number(category)));
+        }
         else if(action==='approve') {
           const result=await svc.decideLeave(id,'approve',i.user.id); await i.editReply({embeds:[card(result)]});
         }

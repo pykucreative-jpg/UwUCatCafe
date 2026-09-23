@@ -35,6 +35,13 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
 );
 ALTER TABLE tickets ADD COLUMN IF NOT EXISTS displayed_leave_status text;
 CREATE TABLE IF NOT EXISTS settings (key text PRIMARY KEY, value text NOT NULL);
+CREATE TABLE IF NOT EXISTS blacklist (
+ id bigserial PRIMARY KEY, ssn text NOT NULL, ic_name text NOT NULL,
+ photo bytea NOT NULL, photo_type text NOT NULL, reason text NOT NULL,
+ added_by text NOT NULL, added_by_name text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
+ removed_at timestamptz, removed_by text, removed_by_name text
+);
+CREATE INDEX IF NOT EXISTS blacklist_active_ssn ON blacklist(ssn,created_at DESC) WHERE removed_at IS NULL;
 CREATE TABLE IF NOT EXISTS notifications (
  id bigserial PRIMARY KEY, channel_id text NOT NULL, user_id text, title text NOT NULL,
  body text NOT NULL, delivered boolean NOT NULL DEFAULT false, created_at timestamptz DEFAULT now()

@@ -12,7 +12,7 @@ export const config = {
   leave: '1552034486064128122', logs: '1552034487641178142',
   panel: '1552236701324148746', contactCategory: '1552240703168454707', leaveCategory: '1552240890062315531'
 };
-export const labels = { job:'🎀 Zatrudnienie', plus:'🌟 Plus', minus:'⚠️ Minus', awans:'✨ Awans', degrad:'↘️ Degradacja', zwolnij:'📋 Zwolnienie', urlop:'🌴 Urlop', zdejmijurlop:'☀️ Zakończenie urlopu', ticket:'💌 Zgłoszenie' };
+export const labels = { job:'🎀 Zatrudnienie', plus:'🌟 Plus', minus:'⚠️ Minus', awans:'✨ Awans', degrad:'↘️ Degradacja', zwolnij:'📋 Zwolnienie', urlop:'🌴 Urlop', zdejmijurlop:'☀️ Zakończenie urlopu', ticket:'💌 Zgłoszenie', bldodaj:'🚫 Dodanie na czarną listę', blusun:'🕊️ Usunięcie z czarnej listy' };
 export function environment(env = process.env) {
   for (const key of ['DISCORD_TOKEN','DISCORD_CLIENT_ID','DISCORD_CLIENT_SECRET','DISCORD_GUILD_ID','DATABASE_URL','PUBLIC_URL']) {
     if (!env[key]) throw new Error(`Uzupełnij zmienną ${key}.`);
